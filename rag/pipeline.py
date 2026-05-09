@@ -1,6 +1,5 @@
 import os
 import sys
-import time
 from dotenv import load_dotenv
 
 # Ensure stdout handles utf-8 characters properly on Windows
@@ -130,23 +129,31 @@ SYSTEM_PROMPT = (
 # PUBLIC API
 # ---------------------------------------------------------------------------
 
-def query(question: str) -> str:
+def query(question: str, history: list = None) -> str:
     """
     Retrieves context, maintains conversational memory, and returns an answer.
     Gemini is tried first; Groq is used as a silent fallback.
+    
+    Args:
+        question: The user query.
+        history: Optional list of (question, answer) tuples for memory.
+                 If None, uses the module-level chat_history (local/test only).
     """
     global chat_history
+    
+    # Determine which history to use
+    active_history = history if history is not None else chat_history
 
     # 1. Rewrite the query using recent history for better retrieval
     standalone_query = question
-    if chat_history:
+    if active_history:
         rewrite_prompt = (
             "Given the following chat history and a follow-up question, rephrase the follow-up "
             "question to be a standalone query that includes relevant keywords from the history.\n"
             "Return ONLY the standalone question text, nothing else.\n\n"
             "History:\n"
         )
-        for h_q, h_a in chat_history[-2:]:
+        for h_q, h_a in active_history[-2:]:
             rewrite_prompt += f"User: {h_q}\nMaya: {h_a}\n"
         rewrite_prompt += f"\nFollow-up question: {question}\nStandalone question:"
 
@@ -163,9 +170,9 @@ def query(question: str) -> str:
 
     # 3. Format conversation history for the prompt
     history_text = ""
-    if chat_history:
+    if active_history:
         history_text = "Conversation History (Last 5 turns):\n"
-        for q, a in chat_history:
+        for q, a in active_history:
             history_text += f"User: {q}\nMaya: {a}\n\n"
 
     # 4. Build the full prompt
@@ -183,10 +190,11 @@ def query(question: str) -> str:
     # 5. Generate answer (with automatic fallback)
     answer = _invoke_with_fallback(messages)
 
-    # 6. Update memory
-    chat_history.append((question, answer))
-    if len(chat_history) > MAX_TURNS:
-        chat_history.pop(0)
+    # 6. Update memory if using global history
+    if history is None:
+        chat_history.append((question, answer))
+        if len(chat_history) > MAX_TURNS:
+            chat_history.pop(0)
 
     return answer
 
@@ -196,6 +204,7 @@ def query(question: str) -> str:
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
+    import time
     import unittest.mock as mock
     import rag.pipeline as _pipeline_module  # reference the module itself for patching
 

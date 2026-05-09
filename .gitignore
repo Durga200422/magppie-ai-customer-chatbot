@@ -1,8 +1,11 @@
-# Environment secrets - NEVER commit to version control
+# Environment secrets — NEVER commit to version control
 .env
 .streamlit/secrets.toml
 
-# Vector database — committed to repo so Streamlit Cloud doesn't need to rebuild
+# Vector database
+# NOTE: chroma_db/ is intentionally committed to the repo so that Streamlit Cloud
+# can serve the chatbot immediately without rebuilding the knowledge base on every cold start.
+# Uncomment the line below only if you want to exclude it (e.g. to trigger an auto-rebuild).
 # chroma_db/
 
 # Python cache
@@ -12,8 +15,9 @@ __pycache__/
 *.pyd
 .Python
 
-# Scraped / build artifacts
+# Runtime / build artifacts
 leads/
+logs/
 
 # Virtual environment
 venv/

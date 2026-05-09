@@ -8,7 +8,7 @@ LEAD_TRIGGERS = [
     "schedule", "appointment", "demo", "quote", "pricing", "leave my details"
 ]
 
-def handle_query(question: str, query_function) -> dict:
+def handle_query(question: str, query_function, history: list = None) -> dict:
     """
     Decides how to handle different types of user queries before calling RAG.
     """
@@ -32,7 +32,7 @@ def handle_query(question: str, query_function) -> dict:
     # 2. Check for lead intent
     for trigger in LEAD_TRIGGERS:
         if trigger in question_lower:
-            rag_answer = query_function(question)
+            rag_answer = query_function(question, history=history)
             nudge = "\n\nWould you like me to arrange a callback or share more details? You can leave your contact info below."
             return {
                 "answer": rag_answer + nudge,
@@ -41,7 +41,7 @@ def handle_query(question: str, query_function) -> dict:
             }
             
     # 3. Normal Query
-    rag_answer = query_function(question)
+    rag_answer = query_function(question, history=history)
     return {
         "answer": rag_answer,
         "escalation": False,

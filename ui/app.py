@@ -1,7 +1,7 @@
 import streamlit as st
 import sys
 import os
-import time
+import re
 import base64
 from dotenv import load_dotenv
 
@@ -245,6 +245,8 @@ if "messages" not in st.session_state:
     st.session_state.messages = [
         {"role": "assistant", "content": "👋 Hi! I'm Maya, Magppie's virtual assistant. I can help you with store locations, products, offers, contact info, and more. What can I help you with today?", "type": "normal"}
     ]
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
 # Layout: 1:2:1.2 Ratio
 col_left, col_center, col_right = st.columns([1, 2, 1.2], gap="large")
@@ -285,6 +287,7 @@ with col_center:
             st.session_state.messages = [
                 {"role": "assistant", "content": "👋 Hi! I'm Maya, Magppie's virtual assistant. I can help you with store locations, products, offers, contact info, and more. What can I help you with today?", "type": "normal"}
             ]
+            st.session_state.chat_history = []
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
             
@@ -292,7 +295,6 @@ with col_center:
     
     # Render Chat History
     chat_html = '<div class="chat-container">'
-    import re
     for msg in st.session_state.messages:
         content = msg["content"]
         
@@ -350,7 +352,7 @@ if st.session_state.messages[-1]["role"] == "user":
     
     with col_center:
         with st.spinner("Maya is thinking..."):
-            response_data = handle_query(last_query, query_func)
+            response_data = handle_query(last_query, query_func, history=st.session_state.chat_history)
             
             msg_type = "escalation" if response_data.get("escalation") else "normal"
             if response_data.get("lead_intent"):
@@ -361,6 +363,12 @@ if st.session_state.messages[-1]["role"] == "user":
                 "content": response_data["answer"],
                 "type": msg_type
             })
+            
+            # Update history for next turn (max 5 turns)
+            st.session_state.chat_history.append((last_query, response_data["answer"]))
+            if len(st.session_state.chat_history) > 5:
+                st.session_state.chat_history.pop(0)
+                
             st.rerun()
 
 # ================= RIGHT PANEL (LEAD CAPTURE) =================
