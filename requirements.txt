@@ -1,3 +1,10 @@
+# PyTorch CPU-only wheels — much smaller than CUDA builds, required for sentence-transformers
+# Using the official PyTorch CPU index so Streamlit Cloud installs correctly
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
+torchaudio
+
 # Core framework
 streamlit>=1.32.0
 
@@ -8,11 +15,11 @@ langchain-google-genai>=2.0.0
 langchain-groq>=0.1.0
 langchain-huggingface>=0.1.0
 
+# Embeddings (depends on torch above)
+sentence-transformers>=2.2.0
+
 # Vector store
 chromadb>=0.4.0
-
-# Embeddings
-sentence-transformers>=2.2.0
 
 # Document loaders
 pymupdf>=1.23.0
