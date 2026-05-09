@@ -52,11 +52,47 @@ def main():
         sys.exit(1)
         
     print("\n=== Step 3: Embeddings & Vector Store ===")
-    # Initialize the local CPU embedding model
     embeddings = get_embedding_model()
-    
-    # Build and persist the Chroma database
-    build_vector_store(all_chunks, embeddings)
+
+    # Build with rate-limit-safe batch sizes (Gemini free tier: 100 req/min)
+    # We use batch_size=30 + 5s sleep between batches to stay well under the limit
+    from rag.vector_store import CHROMA_PATH, COLLECTION_NAME
+    from langchain_community.vectorstores import Chroma
+    import shutil, time
+
+    if os.path.exists(CHROMA_PATH):
+        print("Clearing existing vector store for clean rebuild...")
+        shutil.rmtree(CHROMA_PATH)
+
+    vector_store = Chroma(
+        collection_name=COLLECTION_NAME,
+        embedding_function=embeddings,
+        persist_directory=CHROMA_PATH
+    )
+
+    batch_size = 20
+    total = len(all_chunks)
+    print(f"Embedding {total} chunks in batches of {batch_size} (with rate-limit backoff)...")
+    for i in range(0, total, batch_size):
+        batch = all_chunks[i:i + batch_size]
+        # Retry with exponential backoff on quota errors
+        for attempt in range(6):
+            try:
+                vector_store.add_documents(batch)
+                break
+            except Exception as e:
+                if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                    wait = 60 * (2 ** attempt)  # 60s, 120s, 240s...
+                    print(f"  Rate limit hit — retrying in {wait}s (attempt {attempt+1})...")
+                    time.sleep(wait)
+                else:
+                    raise
+        processed = min(i + batch_size, total)
+        print(f"  {processed}/{total} chunks stored...")
+        time.sleep(15)  # 15s between batches keeps us under 100 req/min
+
+    if hasattr(vector_store, 'persist'):
+        vector_store.persist()
     
     print("\n" + "="*60)
     print(f"SUCCESS: Knowledge base successfully built and indexed {total_chunks} chunks!")

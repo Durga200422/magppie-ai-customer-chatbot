@@ -2,8 +2,8 @@
 .env
 .streamlit/secrets.toml
 
-# Vector database (built at runtime)
-chroma_db/
+# Vector database — committed to repo so Streamlit Cloud doesn't need to rebuild
+# chroma_db/
 
 # Python cache
 __pycache__/
