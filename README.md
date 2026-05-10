@@ -1,4 +1,4 @@
-# Magppie AI Concierge 🥂
+# Magppie AI Concierge
 
 <div align="center">
   <img src="assets/logo.png" alt="Magppie Logo" width="140">
